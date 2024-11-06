@@ -1,6 +1,7 @@
 package algorithms
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -22,10 +23,26 @@ func NewRoundRobin(targetGroup *lb.TargetGroup) *roundRobin {
 	}
 }
 
-func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) {
+func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 	currentIndex := atomic.LoadInt64(&r.current)
 	numTargets := int64(len(r.targetGroup.Targets))
 	currentTarget := r.targetGroup.Targets[currentIndex]
+
+	if !currentTarget.Healthy {
+		fmt.Printf("Target %s:%d is not healthy", currentTarget.Host, currentTarget.Port)
+
+		for i := 0; i < int(numTargets); i++ {
+			currentIndex = (currentIndex + 1) % numTargets
+			currentTarget = r.targetGroup.Targets[currentIndex]
+
+			if currentTarget.Healthy {
+				atomic.StoreInt64(&r.current, currentIndex)
+				break
+			}
+		}
+		
+		return errors.New("no healthy targets available")
+	}
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
 		Scheme: "http",
@@ -39,4 +56,6 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) {
 	}
 
 	proxy.ServeHTTP(w, req)
+
+	return nil
 }
