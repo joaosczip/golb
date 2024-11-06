@@ -48,6 +48,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 				failures = 0
 				fmt.Printf("health check passed for target %s:%d\n", t.Host, t.Port)
 				t.Healthy = true
+				res.Body.Close()
 				continue
 			}
 		}

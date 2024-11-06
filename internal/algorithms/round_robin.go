@@ -28,20 +28,20 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 	numTargets := int64(len(r.targetGroup.Targets))
 	currentTarget := r.targetGroup.Targets[currentIndex]
 
-	if !currentTarget.Healthy {
+	unhealthyTargets := 0
+
+	for !currentTarget.Healthy {
 		fmt.Printf("Target %s:%d is not healthy", currentTarget.Host, currentTarget.Port)
 
-		for i := 0; i < int(numTargets); i++ {
-			currentIndex = (currentIndex + 1) % numTargets
-			currentTarget = r.targetGroup.Targets[currentIndex]
+		currentIndex = (currentIndex + 1) % numTargets
+		currentTarget = r.targetGroup.Targets[currentIndex]
 
-			if currentTarget.Healthy {
-				atomic.StoreInt64(&r.current, currentIndex)
-				break
-			}
+		fmt.Printf("current target healthy %t", currentTarget.Healthy)
+		unhealthyTargets++
+
+		if int64(unhealthyTargets) == numTargets {
+			return errors.New("no healthy targets available")
 		}
-		
-		return errors.New("no healthy targets available")
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
@@ -49,11 +49,7 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		Host:   fmt.Sprintf("%s:%d", currentTarget.Host, currentTarget.Port),
 	})
 
-	if currentIndex == numTargets-1 {
-		atomic.StoreInt64(&r.current, 0)
-	} else {
-		atomic.AddInt64(&r.current, 1)
-	}
+	atomic.StoreInt64(&r.current, (currentIndex + 1) % numTargets)
 
 	proxy.ServeHTTP(w, req)
 
