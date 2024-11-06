@@ -30,13 +30,12 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 
 	unhealthyTargets := 0
 
-	for !currentTarget.Healthy {
+	for !currentTarget.IsHealthy() {
 		fmt.Printf("Target %s:%d is not healthy", currentTarget.Host, currentTarget.Port)
 
 		currentIndex = (currentIndex + 1) % numTargets
 		currentTarget = r.targetGroup.Targets[currentIndex]
 
-		fmt.Printf("current target healthy %t", currentTarget.Healthy)
 		unhealthyTargets++
 
 		if int64(unhealthyTargets) == numTargets {

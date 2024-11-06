@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -12,6 +13,7 @@ type Target struct {
 	Host    string
 	Port    int
 	Healthy bool
+	mux sync.RWMutex
 }
 
 func NewTarget(host string, port int) *Target {
@@ -19,6 +21,18 @@ func NewTarget(host string, port int) *Target {
 		Host: host,
 		Port: port,
 	}
+}
+
+func (t *Target) setHealthy(healthy bool) {
+	t.mux.Lock()
+	defer t.mux.Unlock()
+	t.Healthy = healthy
+}
+
+func (t *Target) IsHealthy() bool {
+	t.mux.RLock()
+	defer t.mux.RUnlock()
+	return t.Healthy
 }
 
 func (t *Target) healthCheck(hc HealthCheckConfig) {
@@ -47,7 +61,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 			if res.StatusCode == http.StatusOK {
 				failures = 0
 				fmt.Printf("health check passed for target %s:%d\n", t.Host, t.Port)
-				t.Healthy = true
+				t.setHealthy(true)
 				res.Body.Close()
 				continue
 			}
@@ -58,7 +72,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 
 		if failures > hc.FailureThreshold {
 			fmt.Printf("target %s:%d is unhealthy\n", t.Host, t.Port)
-			t.Healthy = false
+			t.setHealthy(false)
 		}
 	}
 }
