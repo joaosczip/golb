@@ -12,20 +12,20 @@ import (
 )
 
 type roundRobin struct {
-	current int64
+	current atomic.Int64
 	targetGroup *lb.TargetGroup
 }
 
 func NewRoundRobin(targetGroup *lb.TargetGroup) *roundRobin {
 	return &roundRobin{
-		current: 0,
+		current: atomic.Int64{},
 		targetGroup: targetGroup,
 	}
 }
 
 func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
-	currentIndex := atomic.LoadInt64(&r.current)
 	numTargets := int64(len(r.targetGroup.Targets))
+	currentIndex := r.current.Load()
 	currentTarget := r.targetGroup.Targets[currentIndex]
 
 	unhealthyTargets := 0
@@ -48,9 +48,9 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		Host:   fmt.Sprintf("%s:%d", currentTarget.Host, currentTarget.Port),
 	})
 
-	atomic.StoreInt64(&r.current, (currentIndex + 1) % numTargets)
-
 	proxy.ServeHTTP(w, req)
+
+	r.current.Store((currentIndex + 1) % numTargets)
 
 	return nil
 }
