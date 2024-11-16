@@ -1,0 +1,16 @@
+port: 9000
+target-groups:
+  - name: node-server
+    algorithm: round-robin
+    health-check:
+      interval: 1
+      timeout: 2
+      failure-threshold: 2
+      path: "/health"
+    targets:
+      - host: "http://localhost"
+        port: 8080
+      - host: "http://localhost"
+        port: 8081
+      - host: "http://localhost"
+        port: 8082
