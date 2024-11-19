@@ -62,7 +62,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 			if res.StatusCode == http.StatusOK {
 				failures = 0
 				succeeded++
-				fmt.Printf("health check passed for target %s:%d, %d, %d\n", t.Host, t.Port, succeeded,hc.HealthyThreshold)
+				fmt.Printf("health check passed for target %s:%d, %d, %d\n", t.Host, t.Port, succeeded, hc.HealthyThreshold)
 
 				if !t.IsHealthy() && succeeded >= hc.HealthyThreshold {
 					fmt.Printf("target %s:%d is healthy\n", t.Host, t.Port)
