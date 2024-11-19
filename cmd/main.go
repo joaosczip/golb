@@ -27,6 +27,7 @@ type HealthCheck struct {
 	Interval         int    `yaml:"interval"`
 	Timeout          int    `yaml:"timeout"`
 	FailureThreshold int    `yaml:"failure-threshold"`
+	HealthyThreshold int    `yaml:"healthy-threshold"`
 	Path             string `yaml:"path"`
 }
 
@@ -64,6 +65,7 @@ func main() {
 				IntervalInSec:    tg.HealthCheck.Interval,
 				TimeoutInSec:     tg.HealthCheck.Timeout,
 				FailureThreshold: tg.HealthCheck.FailureThreshold,
+				HealthyThreshold: tg.HealthCheck.HealthyThreshold,
 				Path:             tg.HealthCheck.Path,
 				HttpClient:       httpClient,
 			},

@@ -41,6 +41,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 
 	healthCheckUrl := fmt.Sprintf("http://%s:%d%s", t.Host, t.Port, hc.Path)
 	failures := 0
+	succeeded := 0
 
 	for {
 		<-ticker.C
@@ -60,8 +61,14 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 		if err == nil {
 			if res.StatusCode == http.StatusOK {
 				failures = 0
-				fmt.Printf("health check passed for target %s:%d\n", t.Host, t.Port)
-				t.setHealthy(true)
+				succeeded++
+				fmt.Printf("health check passed for target %s:%d, %d, %d\n", t.Host, t.Port, succeeded,hc.HealthyThreshold)
+
+				if !t.IsHealthy() && succeeded >= hc.HealthyThreshold {
+					fmt.Printf("target %s:%d is healthy\n", t.Host, t.Port)
+					t.setHealthy(true)
+				}
+
 				res.Body.Close()
 				continue
 			}
@@ -69,6 +76,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 
 		fmt.Printf("health check failed for target %s:%d: %v\n", t.Host, t.Port, err)
 		failures++
+		succeeded = 0
 
 		if failures > hc.FailureThreshold {
 			fmt.Printf("target %s:%d is unhealthy\n", t.Host, t.Port)
