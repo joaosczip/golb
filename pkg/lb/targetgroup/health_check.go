@@ -1,4 +1,4 @@
-package lb
+package targetgroup
 
 import "net/http"
 
@@ -8,11 +8,6 @@ type HealthCheckConfig struct {
 	FailureThreshold int
 	Path             string
 	HttpClient       *http.Client
-}
-
-type TargetGroup struct {
-	Targets           []*Target
-	HealthCheckConfig *HealthCheckConfig
 }
 
 type HealthCheckConfigParams struct {
@@ -31,17 +26,4 @@ func NewHealthCheckConfig(params HealthCheckConfigParams) *HealthCheckConfig {
 		Path:             params.Path,
 		HttpClient:       params.HttpClient,
 	}
-}
-
-func NewTargetGroup(targets []*Target, healthCheckConfig *HealthCheckConfig) *TargetGroup {
-	tg := &TargetGroup{
-		Targets:           targets,
-		HealthCheckConfig: healthCheckConfig,
-	}
-
-	for _, target := range tg.Targets {
-		go target.healthCheck(*healthCheckConfig)
-	}
-
-	return tg
 }

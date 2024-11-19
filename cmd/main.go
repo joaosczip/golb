@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joaosczip/go-lb/internal/algorithms"
+	alg "github.com/joaosczip/go-lb/internal/algorithms"
 	"github.com/joaosczip/go-lb/pkg/lb"
+	"github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,30 +51,32 @@ func main() {
 		log.Fatalf("could not parse config file: %v", err)
 	}
 
-	var targets []*lb.Target
-	var healthCheckConfig *lb.HealthCheckConfig
+	var targets []*targetgroup.Target
+	var healthCheckConfig *targetgroup.HealthCheckConfig
 
 	for _, tg := range config.TargetGroups {
 		for _, target := range tg.Targets {
-			targets = append(targets, &lb.Target{
-				Host: target.Host,
-				Port: target.Port,
-			})
+			targets = append(targets, targetgroup.NewTarget(target.Host, target.Port))
 		}
 
-		healthCheckConfig = lb.NewHealthCheckConfig(lb.HealthCheckConfigParams{
-			IntervalInSec:    tg.HealthCheck.Interval,
-			TimeoutInSec:     tg.HealthCheck.Timeout,
-			FailureThreshold: tg.HealthCheck.FailureThreshold,
-			Path:             tg.HealthCheck.Path,
-			HttpClient:       httpClient,
-		})
+		healthCheckConfig = targetgroup.NewHealthCheckConfig(
+			targetgroup.HealthCheckConfigParams{
+				IntervalInSec:    tg.HealthCheck.Interval,
+				TimeoutInSec:     tg.HealthCheck.Timeout,
+				FailureThreshold: tg.HealthCheck.FailureThreshold,
+				Path:             tg.HealthCheck.Path,
+				HttpClient:       httpClient,
+			},
+		)
 	}
 
-	targetGroup := lb.NewTargetGroup(targets, healthCheckConfig)
+	targetGroup := targetgroup.NewTargetGroup(targetgroup.NewTargetGroupParams{
+		Targets:           targets,
+		HealthCheckConfig: healthCheckConfig,
+		Algorithm:         alg.NewRoundRobin(targets),
+	})
 
-	roundRobin := algorithms.NewRoundRobin(targetGroup)
-	lb := lb.NewLoadBalancer(roundRobin)
+	lb := lb.NewLoadBalancer([]*targetgroup.TargetGroup{targetGroup})
 
 	err = lb.ListenAndServe(":9000")
 

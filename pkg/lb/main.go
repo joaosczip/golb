@@ -2,28 +2,28 @@ package lb
 
 import (
 	"net/http"
+
+	tg "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 )
 
-type Algorithm interface {
-	Handle(w http.ResponseWriter, r *http.Request) error
-}
-
 type LoadBalancer struct {
-	Algorithm Algorithm
+	targetGroups []*tg.TargetGroup
 }
 
-func NewLoadBalancer(algorithm Algorithm) *LoadBalancer {
+func NewLoadBalancer(targetGroups []*tg.TargetGroup) *LoadBalancer {
 	return &LoadBalancer{
-		Algorithm: algorithm,
+		targetGroups: targetGroups,
 	}
 }
 
 func (lb *LoadBalancer) ListenAndServe(addr string) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		err := lb.Algorithm.Handle(w, r)
+		for _, targetGroup := range lb.targetGroups {
+			err := targetGroup.Algorithm.Handle(w, r)
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			}
 		}
 	})
 	return http.ListenAndServe(addr, nil)

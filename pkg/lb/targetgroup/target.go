@@ -1,4 +1,4 @@
-package lb
+package targetgroup
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type Target struct {
 	Host    string
 	Port    int
 	Healthy bool
-	mux sync.RWMutex
+	mux     sync.RWMutex
 }
 
 func NewTarget(host string, port int) *Target {
@@ -52,7 +52,7 @@ func (t *Target) healthCheck(hc HealthCheckConfig) {
 		if err != nil {
 			log.Fatalf("could not create request: %v", err)
 		}
-		
+
 		res, err := hc.HttpClient.Do(req)
 
 		cancel()

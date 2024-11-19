@@ -1,4 +1,4 @@
-package algorithms
+package lb
 
 import (
 	"errors"
@@ -8,25 +8,25 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	"github.com/joaosczip/go-lb/pkg/lb"
+	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 )
 
 type roundRobin struct {
 	current atomic.Int64
-	targetGroup *lb.TargetGroup
+	targets []*lb.Target
 }
 
-func NewRoundRobin(targetGroup *lb.TargetGroup) *roundRobin {
+func NewRoundRobin(targets []*lb.Target) *roundRobin {
 	return &roundRobin{
 		current: atomic.Int64{},
-		targetGroup: targetGroup,
+		targets: targets,
 	}
 }
 
 func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
-	numTargets := int64(len(r.targetGroup.Targets))
+	numTargets := int64(len(r.targets))
 	currentIndex := r.current.Load()
-	currentTarget := r.targetGroup.Targets[currentIndex]
+	currentTarget := r.targets[currentIndex]
 
 	unhealthyTargets := 0
 
@@ -34,7 +34,7 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		fmt.Printf("Target %s:%d is not healthy", currentTarget.Host, currentTarget.Port)
 
 		currentIndex = (currentIndex + 1) % numTargets
-		currentTarget = r.targetGroup.Targets[currentIndex]
+		currentTarget = r.targets[currentIndex]
 
 		unhealthyTargets++
 
