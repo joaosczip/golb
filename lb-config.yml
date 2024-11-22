@@ -3,10 +3,10 @@ target-groups:
   - name: node-server
     algorithm: round-robin
     health-check:
-      interval: 3
+      interval: 4
       timeout: 2
       failure-threshold: 2
-      healthy-threshold: 3
+      healthy-threshold: 1
       path: "/health"
     targets:
       - host: "localhost"

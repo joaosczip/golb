@@ -3,7 +3,6 @@ package lb
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -32,7 +31,7 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 	unhealthyTargets := 0
 
 	for !currentTarget.IsHealthy() {
-		fmt.Printf("Target %s:%d is not healthy", currentTarget.Host, currentTarget.Port)
+		fmt.Printf("Target %s:%d is unhealthy", currentTarget.Host, currentTarget.Port)
 
 		currentIndex = (currentIndex + 1) % numTargets
 		currentTarget = r.targets[currentIndex]
@@ -48,34 +47,6 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s:%d", currentTarget.Host, currentTarget.Port),
 	})
-
-	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
-		fmt.Printf("error: %v\n", err)
-
-		if req.Response == nil {
-			r.Handle(w, req)
-		}
-
-		response := req.Response
-
-		for k, v := range response.Header {
-			w.Header()[k] = v
-		}
-
-		w.WriteHeader(response.StatusCode)
-
-		if response.Body != nil {
-			body, err := io.ReadAll(response.Body)
-			defer response.Body.Close()
-
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.Write(body)
-		}
-	}
 
 	proxy.ServeHTTP(w, req)
 
