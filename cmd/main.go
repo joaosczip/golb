@@ -6,6 +6,7 @@ import (
 	"os"
 
 	alg "github.com/joaosczip/go-lb/internal/algorithms"
+	"github.com/joaosczip/go-lb/internal/proxy"
 	"github.com/joaosczip/go-lb/pkg/lb"
 	"github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"gopkg.in/yaml.v3"
@@ -75,13 +76,13 @@ func main() {
 	targetGroup := targetgroup.NewTargetGroup(targetgroup.NewTargetGroupParams{
 		Targets:           targets,
 		HealthCheckConfig: healthCheckConfig,
-		Algorithm:         alg.NewRoundRobin(targets),
+		Algorithm:         alg.NewRoundRobin(targets, proxy.NewReverseProxyFactory()),
 	})
 
 	lb := lb.NewLoadBalancer([]*targetgroup.TargetGroup{targetGroup})
 
 	err = lb.ListenAndServe(":9000")
-
+ 
 	if err != nil {
 		log.Fatalf("could not start server: %v", err)
 	}

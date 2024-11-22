@@ -1,25 +1,26 @@
-package lb
+package round_robin
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"sync/atomic"
 
+	"github.com/joaosczip/go-lb/internal/proxy"
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 )
 
 type roundRobin struct {
 	current atomic.Int64
 	targets []*lb.Target
+	proxyFactory proxy.ProxyFactory
 }
 
-func NewRoundRobin(targets []*lb.Target) *roundRobin {
+func NewRoundRobin(targets []*lb.Target, proxyFactory proxy.ProxyFactory) *roundRobin {
 	return &roundRobin{
 		current: atomic.Int64{},
 		targets: targets,
+		proxyFactory: proxyFactory,
 	}
 }
 
@@ -43,11 +44,7 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		}
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", currentTarget.Host, currentTarget.Port),
-	})
-
+	proxy := r.proxyFactory.Create(currentTarget.Host, currentTarget.Port)
 	proxy.ServeHTTP(w, req)
 
 	r.current.Store((currentIndex + 1) % numTargets)
