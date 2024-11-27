@@ -70,8 +70,8 @@ type leastResponseTime struct {
 func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory) *leastResponseTime {
 	lrtTargets := make([]*leastResponseTimeTarget, len(targets))
 
-	for _, target := range targets {
-		lrtTargets = append(lrtTargets, newLeastResponseTimeTarget(target))
+	for i, target := range targets {
+		lrtTargets[i] = newLeastResponseTimeTarget(target)
 	}
 	
 	return &leastResponseTime{
