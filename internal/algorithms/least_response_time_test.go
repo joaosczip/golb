@@ -2,6 +2,7 @@ package algorithms
 
 import (
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
@@ -17,11 +18,13 @@ func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
 		Target: targets[0],
 		avgResponseTime: 112.0,
 		requestCount: 10,
+		mux: sync.RWMutex{},
 	}
 	lrtTargets[1] = &leastResponseTimeTarget{
 		Target: targets[1],
 		avgResponseTime: 100.10,
 		requestCount: 3,
+		mux: sync.RWMutex{},
 	}
 
 	return lrtTargets

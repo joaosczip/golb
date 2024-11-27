@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/joaosczip/go-lb/internal/proxy"
@@ -42,36 +43,56 @@ type leastResponseTimeTarget struct {
 	*lb.Target
 	avgResponseTime float64
 	requestCount int
+	mux sync.RWMutex
 }
+
+func newLeastResponseTimeTarget(target *lb.Target) *leastResponseTimeTarget {
+	return &leastResponseTimeTarget{
+		Target: target,
+		mux: sync.RWMutex{},
+	}
+}
+
+func (l *leastResponseTimeTarget) getAvgResponseTime() float64 {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+
+	return l.avgResponseTime
+}
+
 
 type leastResponseTime struct {
 	proxyFactory proxy.ProxyFactory
 	targets []*leastResponseTimeTarget
+	mux sync.RWMutex
 }
 
 func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory) *leastResponseTime {
 	lrtTargets := make([]*leastResponseTimeTarget, len(targets))
 
 	for _, target := range targets {
-		lrtTargets = append(lrtTargets, &leastResponseTimeTarget{
-			Target: target,
-			avgResponseTime: 0,
-			requestCount: 0,
-		})
+		lrtTargets = append(lrtTargets, newLeastResponseTimeTarget(target))
 	}
 	
 	return &leastResponseTime{
 		targets: lrtTargets,
 		proxyFactory: proxyFactory,
+		mux: sync.RWMutex{},
 	}
 }
 
 func (l *leastResponseTime) targetsSortedByAvgResponseTime() []*leastResponseTimeTarget {
-	sort.Slice(l.targets, func(i, j int) bool {
-		return l.targets[i].avgResponseTime < l.targets[j].avgResponseTime
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+	
+	targetsCopy := make([]*leastResponseTimeTarget, len(l.targets))
+	copy(targetsCopy, l.targets)
+
+	sort.Slice(targetsCopy, func(i, j int) bool {
+		return targetsCopy[i].getAvgResponseTime() < targetsCopy[j].getAvgResponseTime()
 	})
 
-	return l.targets
+	return targetsCopy
 }
 
 func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) error {
@@ -95,8 +116,10 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 
 	responseTime := timedRW.endTime.Sub(timedRW.startTime)
 
+	currentTarget.mux.Lock()
 	currentTarget.requestCount++
 	currentTarget.avgResponseTime = (currentTarget.avgResponseTime + float64(responseTime.Nanoseconds())) / float64(currentTarget.requestCount)
+	currentTarget.mux.Unlock()
 
 	return nil
 }
