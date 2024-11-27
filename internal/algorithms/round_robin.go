@@ -1,4 +1,4 @@
-package round_robin
+package algorithms
 
 import (
 	"errors"

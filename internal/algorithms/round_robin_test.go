@@ -1,4 +1,4 @@
-package round_robin
+package algorithms
 
 import (
 	"net/http"
@@ -46,7 +46,6 @@ func getTargets() []*lb.Target {
 func TestRoundRobin_Handle(t *testing.T) {
 	proxyFactory := &MockedProxyFactory{}
 	proxy := &MockedProxy{}
-	
 
 	t.Run("Should call the current target when it's healthy", func(t *testing.T) {
 		targets := getTargets()
