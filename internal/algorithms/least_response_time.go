@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/joaosczip/go-lb/internal/proxy"
@@ -41,25 +42,22 @@ func (t *timedResponseWriter) Write(b []byte) (int, error) {
 
 type leastResponseTimeTarget struct {
 	*lb.Target
-	avgResponseTime float64
-	requestCount int
-	mux sync.RWMutex
+	avgResponseTime atomic.Int64
+	requestCount atomic.Int64
 }
 
 func newLeastResponseTimeTarget(target *lb.Target) *leastResponseTimeTarget {
 	return &leastResponseTimeTarget{
 		Target: target,
-		mux: sync.RWMutex{},
 	}
 }
 
-func (l *leastResponseTimeTarget) getAvgResponseTime() float64 {
-	l.mux.RLock()
-	defer l.mux.RUnlock()
-
-	return l.avgResponseTime
+func (l *leastResponseTimeTarget) setAvgResponseTime(responseTime time.Duration) {
+	l.requestCount.Add(1)
+	l.avgResponseTime.Store(
+		(l.avgResponseTime.Load() + responseTime.Nanoseconds()) / l.requestCount.Load(),
+	)
 }
-
 
 type leastResponseTime struct {
 	proxyFactory proxy.ProxyFactory
@@ -89,7 +87,7 @@ func (l *leastResponseTime) targetsSortedByAvgResponseTime() []*leastResponseTim
 	copy(targetsCopy, l.targets)
 
 	sort.Slice(targetsCopy, func(i, j int) bool {
-		return targetsCopy[i].getAvgResponseTime() < targetsCopy[j].getAvgResponseTime()
+		return targetsCopy[i].avgResponseTime.Load() < targetsCopy[j].avgResponseTime.Load()
 	})
 
 	return targetsCopy
@@ -115,11 +113,7 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 	proxy.ServeHTTP(timedRW, req)
 
 	responseTime := timedRW.endTime.Sub(timedRW.startTime)
-
-	currentTarget.mux.Lock()
-	currentTarget.requestCount++
-	currentTarget.avgResponseTime = (currentTarget.avgResponseTime + float64(responseTime.Nanoseconds())) / float64(currentTarget.requestCount)
-	currentTarget.mux.Unlock()
+	currentTarget.setAvgResponseTime(responseTime)
 
 	return nil
 }

@@ -2,8 +2,9 @@ package algorithms
 
 import (
 	"net/http/httptest"
-	"sync"
 	"testing"
+
+	"sync/atomic"
 
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"github.com/stretchr/testify/assert"
@@ -16,16 +17,19 @@ func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
 	
 	lrtTargets[0] = &leastResponseTimeTarget{
 		Target: targets[0],
-		avgResponseTime: 112.0,
-		requestCount: 10,
-		mux: sync.RWMutex{},
+		avgResponseTime: atomic.Int64{},
+		requestCount: atomic.Int64{},
 	}
+	lrtTargets[0].avgResponseTime.Store(112)
+	lrtTargets[0].requestCount.Store(10)
+
 	lrtTargets[1] = &leastResponseTimeTarget{
 		Target: targets[1],
-		avgResponseTime: 100.10,
-		requestCount: 3,
-		mux: sync.RWMutex{},
+		avgResponseTime: atomic.Int64{},
+		requestCount: atomic.Int64{},
 	}
+	lrtTargets[1].avgResponseTime.Store(100)
+	lrtTargets[1].requestCount.Store(3)
 
 	return lrtTargets
 }
