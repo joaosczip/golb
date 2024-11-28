@@ -44,6 +44,7 @@ type leastResponseTimeTarget struct {
 	*lb.Target
 	avgResponseTime atomic.Int64
 	requestCount atomic.Int64
+	consecutiveRequests atomic.Int64
 }
 
 func newLeastResponseTimeTarget(target *lb.Target) *leastResponseTimeTarget {
@@ -62,10 +63,11 @@ func (l *leastResponseTimeTarget) setAvgResponseTime(responseTime time.Duration)
 type leastResponseTime struct {
 	proxyFactory proxy.ProxyFactory
 	targets []*leastResponseTimeTarget
+	maxConsecutiveRequests int64
 	mux sync.RWMutex
 }
 
-func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory) *leastResponseTime {
+func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory, maxConsecutiveRequests int64) *leastResponseTime {
 	lrtTargets := make([]*leastResponseTimeTarget, len(targets))
 
 	for i, target := range targets {
@@ -75,6 +77,7 @@ func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory)
 	return &leastResponseTime{
 		targets: lrtTargets,
 		proxyFactory: proxyFactory,
+		maxConsecutiveRequests: maxConsecutiveRequests,
 		mux: sync.RWMutex{},
 	}
 }
@@ -98,11 +101,12 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 	currentTarget := sortedTargets[0]
 
 	nextIdx := 1
-	for !currentTarget.IsHealthy() {
+	for !currentTarget.IsHealthy() || currentTarget.consecutiveRequests.Load() > l.maxConsecutiveRequests {
 		if nextIdx == len(sortedTargets) {
 			return errors.New("no healthy targets available")
 		}
 
+		currentTarget.consecutiveRequests.Store(0)
 		currentTarget = sortedTargets[nextIdx]
 		nextIdx++
 	}
@@ -113,6 +117,8 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 	proxy.ServeHTTP(timedRW, req)
 
 	responseTime := timedRW.endTime.Sub(timedRW.startTime)
+
+	currentTarget.consecutiveRequests.Add(1)
 	currentTarget.setAvgResponseTime(responseTime)
 
 	return nil

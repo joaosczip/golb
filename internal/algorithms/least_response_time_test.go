@@ -37,12 +37,13 @@ func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
 func TestLeastResponseTime_Handle(t *testing.T) {
 	proxyFactory := &MockedProxyFactory{}
 	proxy := &MockedProxy{}
+	maxConsecutiveRequests := int64(10)
 	
 	t.Run("Should call the target with the least avg response time", func(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 		
-		lrt := NewLeastResponseTime(targets, proxyFactory)
+		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
 		lrt.targets = lrtTargets
 
 		proxyFactory.On("Create", "localhost", 8081).Return(proxy)
@@ -57,13 +58,15 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		assert.Nil(t, err)
 		proxyFactory.AssertExpectations(t)
 		proxy.AssertExpectations(t)
+
+		assert.Equal(t, lrtTargets[1].consecutiveRequests.Load(), int64(1))
 	})
 
 	t.Run("Should call the next healthy target if the target with the least avg response time is not healthy", func(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory)
+		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
 		lrt.targets = lrtTargets
 		lrt.targets[1].Healthy = false
 
@@ -85,7 +88,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory)
+		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
 		lrt.targets = lrtTargets
 		lrt.targets[0].Healthy = false
 		lrt.targets[1].Healthy = false
@@ -100,6 +103,28 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		assert.Error(t, err, "no healthy targets available")
 		proxyFactory.AssertNotCalled(t, "Create")
 		proxy.AssertNotCalled(t, "ServeHTTP")
+	})
+
+	t.Run("Should call the next healthy target when the current target has received more consecutive requests than the allowed consecutive calls", func(t *testing.T) {
+		targets := getTargets()
+		lrtTargets := buildLRTTargets(targets)
+		lrtTargets[1].consecutiveRequests.Store(11)
+
+		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt.targets = lrtTargets
+
+		proxyFactory.On("Create", "localhost", 8080).Return(proxy)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "http://localhost:8080", nil)
+
+		proxy.On("ServeHTTP", mock.Anything, r).Return()
+
+		err := lrt.Handle(w, r)
+
+		assert.Nil(t, err)
+		proxyFactory.AssertExpectations(t)
+		proxy.AssertExpectations(t)
 	})
 }
 
