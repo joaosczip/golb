@@ -31,13 +31,13 @@ func (m *MockedProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func getTargets() []*lb.Target {
 	return []*lb.Target{
 		{
-			Host: "localhost",
-			Port: 8080,
+			Host:    "localhost",
+			Port:    8080,
 			Healthy: true,
 		},
 		{
-			Host: "localhost",
-			Port: 8081,
+			Host:    "localhost",
+			Port:    8081,
 			Healthy: true,
 		},
 	}
@@ -50,7 +50,7 @@ func TestRoundRobin_Handle(t *testing.T) {
 	t.Run("Should call the current target when it's healthy", func(t *testing.T) {
 		targets := getTargets()
 		rr := NewRoundRobin(targets, proxyFactory)
-		
+
 		proxyFactory.On("Create", "localhost", 8080).Return(proxy)
 
 		w := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestRoundRobin_Handle(t *testing.T) {
 		targets[0].Healthy = false
 
 		rr := NewRoundRobin(targets, proxyFactory)
-		
+
 		proxyFactory.On("Create", "localhost", 8081).Return(proxy)
 
 		w := httptest.NewRecorder()
@@ -95,7 +95,7 @@ func TestRoundRobin_Handle(t *testing.T) {
 		targets[1].Healthy = false
 
 		rr := NewRoundRobin(targets, proxyFactory)
-		
+
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://localhost:8080", nil)
 
@@ -103,7 +103,7 @@ func TestRoundRobin_Handle(t *testing.T) {
 
 		assert.NotNil(t, err)
 		assert.Error(t, err, "no healthy targets available")
-		
+
 		proxyFactory.AssertNotCalled(t, "Create")
 		proxy.AssertNotCalled(t, "ServeHTTP")
 	})

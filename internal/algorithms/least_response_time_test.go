@@ -11,22 +11,21 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-
 func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
 	lrtTargets := make([]*leastResponseTimeTarget, len(targets))
-	
+
 	lrtTargets[0] = &leastResponseTimeTarget{
-		Target: targets[0],
+		Target:          targets[0],
 		avgResponseTime: atomic.Int64{},
-		requestCount: atomic.Int64{},
+		requestCount:    atomic.Int64{},
 	}
 	lrtTargets[0].avgResponseTime.Store(112)
 	lrtTargets[0].requestCount.Store(10)
 
 	lrtTargets[1] = &leastResponseTimeTarget{
-		Target: targets[1],
+		Target:          targets[1],
 		avgResponseTime: atomic.Int64{},
-		requestCount: atomic.Int64{},
+		requestCount:    atomic.Int64{},
 	}
 	lrtTargets[1].avgResponseTime.Store(100)
 	lrtTargets[1].requestCount.Store(3)
@@ -38,11 +37,11 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 	proxyFactory := &MockedProxyFactory{}
 	proxy := &MockedProxy{}
 	maxConsecutiveRequests := int64(10)
-	
+
 	t.Run("Should call the target with the least avg response time", func(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
-		
+
 		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
 		lrt.targets = lrtTargets
 
@@ -127,4 +126,3 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		proxy.AssertExpectations(t)
 	})
 }
-

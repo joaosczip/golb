@@ -11,15 +11,15 @@ import (
 )
 
 type roundRobin struct {
-	current atomic.Int64
-	targets []*lb.Target
+	current      atomic.Int64
+	targets      []*lb.Target
 	proxyFactory proxy.ProxyFactory
 }
 
 func NewRoundRobin(targets []*lb.Target, proxyFactory proxy.ProxyFactory) *roundRobin {
 	return &roundRobin{
-		current: atomic.Int64{},
-		targets: targets,
+		current:      atomic.Int64{},
+		targets:      targets,
 		proxyFactory: proxyFactory,
 	}
 }

@@ -14,15 +14,15 @@ import (
 
 type timedResponseWriter struct {
 	http.ResponseWriter
-	startTime time.Time
-	endTime time.Time
+	startTime  time.Time
+	endTime    time.Time
 	statusCode int
 }
 
 func newTimedResponseWriter(w http.ResponseWriter) *timedResponseWriter {
 	return &timedResponseWriter{
 		ResponseWriter: w,
-		startTime: time.Now(),
+		startTime:      time.Now(),
 	}
 }
 
@@ -42,8 +42,8 @@ func (t *timedResponseWriter) Write(b []byte) (int, error) {
 
 type leastResponseTimeTarget struct {
 	*lb.Target
-	avgResponseTime atomic.Int64
-	requestCount atomic.Int64
+	avgResponseTime     atomic.Int64
+	requestCount        atomic.Int64
 	consecutiveRequests atomic.Int64
 }
 
@@ -61,10 +61,10 @@ func (l *leastResponseTimeTarget) setAvgResponseTime(responseTime time.Duration)
 }
 
 type leastResponseTime struct {
-	proxyFactory proxy.ProxyFactory
-	targets []*leastResponseTimeTarget
+	proxyFactory           proxy.ProxyFactory
+	targets                []*leastResponseTimeTarget
 	maxConsecutiveRequests int64
-	mux sync.RWMutex
+	mux                    sync.RWMutex
 }
 
 func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory, maxConsecutiveRequests int64) *leastResponseTime {
@@ -73,19 +73,19 @@ func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory,
 	for i, target := range targets {
 		lrtTargets[i] = newLeastResponseTimeTarget(target)
 	}
-	
+
 	return &leastResponseTime{
-		targets: lrtTargets,
-		proxyFactory: proxyFactory,
+		targets:                lrtTargets,
+		proxyFactory:           proxyFactory,
 		maxConsecutiveRequests: maxConsecutiveRequests,
-		mux: sync.RWMutex{},
+		mux:                    sync.RWMutex{},
 	}
 }
 
 func (l *leastResponseTime) targetsSortedByAvgResponseTime() []*leastResponseTimeTarget {
 	l.mux.RLock()
 	defer l.mux.RUnlock()
-	
+
 	targetsCopy := make([]*leastResponseTimeTarget, len(l.targets))
 	copy(targetsCopy, l.targets)
 
