@@ -1,13 +1,14 @@
 package algorithms
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"sync/atomic"
 
 	"github.com/joaosczip/go-lb/internal/proxy"
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
+
+	errs "github.com/joaosczip/go-lb/internal/errors"
 )
 
 type roundRobin struct {
@@ -40,7 +41,7 @@ func (r *roundRobin) Handle(w http.ResponseWriter, req *http.Request) error {
 		unhealthyTargets++
 
 		if int64(unhealthyTargets) == numTargets {
-			return errors.New("no healthy targets available")
+			return errs.ErrNoHealthyTargets
 		}
 	}
 

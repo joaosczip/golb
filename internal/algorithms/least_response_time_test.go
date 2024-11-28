@@ -9,6 +9,8 @@ import (
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	errs "github.com/joaosczip/go-lb/internal/errors"
 )
 
 func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
@@ -100,7 +102,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 
 		err := lrt.Handle(w, r)
 
-		assert.Error(t, err, "no healthy targets available")
+		assert.ErrorIs(t, err, errs.ErrNoHealthyTargets)
 		proxyFactory.AssertNotCalled(t, "Create")
 		proxy.AssertNotCalled(t, "ServeHTTP")
 	})

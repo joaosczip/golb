@@ -1,7 +1,6 @@
 package algorithms
 
 import (
-	"errors"
 	"net/http"
 	"sort"
 	"sync"
@@ -10,6 +9,8 @@ import (
 
 	"github.com/joaosczip/go-lb/internal/proxy"
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
+
+	errs "github.com/joaosczip/go-lb/internal/errors"
 )
 
 type timedResponseWriter struct {
@@ -110,7 +111,7 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 	nextIdx := 1
 	for !currentTarget.IsHealthy() || currentTarget.consecutiveRequests.Load() > l.maxConsecutiveRequests {
 		if nextIdx == len(sortedTargets) {
-			return errors.New("no healthy targets available")
+			return errs.ErrNoHealthyTargets
 		}
 
 		currentTarget.consecutiveRequests.Store(0)

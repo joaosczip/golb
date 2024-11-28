@@ -9,6 +9,8 @@ import (
 	lb "github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	errs "github.com/joaosczip/go-lb/internal/errors"
 )
 
 type MockedProxyFactory struct {
@@ -102,7 +104,7 @@ func TestRoundRobin_Handle(t *testing.T) {
 		err := rr.Handle(w, r)
 
 		assert.NotNil(t, err)
-		assert.Error(t, err, "no healthy targets available")
+		assert.ErrorIs(t, err, errs.ErrNoHealthyTargets)
 
 		proxyFactory.AssertNotCalled(t, "Create")
 		proxy.AssertNotCalled(t, "ServeHTTP")
