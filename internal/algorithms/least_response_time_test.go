@@ -43,6 +43,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		lrtTargets := buildLRTTargets(targets)
 
 		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt.requestsCount.Store(10)
 		lrt.targets = lrtTargets
 
 		proxyFactory.On("Create", "localhost", 8081).Return(proxy)
@@ -124,5 +125,36 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		assert.Nil(t, err)
 		proxyFactory.AssertExpectations(t)
 		proxy.AssertExpectations(t)
+	})
+
+	t.Run("Should call the first target in the list when the overral request count is 0", func(t *testing.T) {
+		targets := getTargets()
+		lrtTargets := buildLRTTargets(targets)
+
+		for _, target := range lrtTargets {
+			target.requestCount.Store(0)
+			target.avgResponseTime.Store(0)
+		}
+
+		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt.requestsCount.Store(0)
+		lrt.targets = lrtTargets
+
+		proxyFactory.On("Create", "localhost", 8080).Return(proxy)
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "http://localhost:8080", nil)
+
+		proxy.On("ServeHTTP", mock.Anything, r).Return()
+
+		err := lrt.Handle(w, r)
+
+		assert.Nil(t, err)
+		proxyFactory.AssertExpectations(t)
+		proxy.AssertExpectations(t)
+
+		assert.Equal(t, lrt.requestsCount.Load(), int64(1))
+		assert.Equal(t, lrt.targets[0].requestCount.Load(), int64(1))
+		assert.Equal(t, lrt.targets[1].requestCount.Load(), int64(0))
 	})
 }

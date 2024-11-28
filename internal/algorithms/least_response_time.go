@@ -64,6 +64,7 @@ type leastResponseTime struct {
 	proxyFactory           proxy.ProxyFactory
 	targets                []*leastResponseTimeTarget
 	maxConsecutiveRequests int64
+	requestsCount          atomic.Int64
 	mux                    sync.RWMutex
 }
 
@@ -78,6 +79,7 @@ func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory,
 		targets:                lrtTargets,
 		proxyFactory:           proxyFactory,
 		maxConsecutiveRequests: maxConsecutiveRequests,
+		requestsCount:          atomic.Int64{},
 		mux:                    sync.RWMutex{},
 	}
 }
@@ -97,8 +99,13 @@ func (l *leastResponseTime) targetsSortedByAvgResponseTime() []*leastResponseTim
 }
 
 func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) error {
-	sortedTargets := l.targetsSortedByAvgResponseTime()
+	sortedTargets := l.targets
 	currentTarget := sortedTargets[0]
+
+	if l.requestsCount.Load() > 0 {
+		sortedTargets := l.targetsSortedByAvgResponseTime()
+		currentTarget = sortedTargets[0]
+	}
 
 	nextIdx := 1
 	for !currentTarget.IsHealthy() || currentTarget.consecutiveRequests.Load() > l.maxConsecutiveRequests {
@@ -120,6 +127,8 @@ func (l *leastResponseTime) Handle(w http.ResponseWriter, req *http.Request) err
 
 	currentTarget.consecutiveRequests.Add(1)
 	currentTarget.setAvgResponseTime(responseTime)
+
+	l.requestsCount.Add(1)
 
 	return nil
 }
