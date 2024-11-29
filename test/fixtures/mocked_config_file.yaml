@@ -1,0 +1,15 @@
+port: 9000
+target-groups:
+  - name: test
+    algorithm: round-robin
+    health-check:
+      interval: 1
+      timeout: 2
+      failure-threshold: 3
+      healthy-threshold: 4
+      path: "/health"
+    targets:
+      - host: "localhost"
+        port: 8080
+      - host: "localhost"
+        port: 8081
