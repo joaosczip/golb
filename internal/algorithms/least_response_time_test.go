@@ -38,13 +38,15 @@ func buildLRTTargets(targets []*lb.Target) []*leastResponseTimeTarget {
 func TestLeastResponseTime_Handle(t *testing.T) {
 	proxyFactory := &MockedProxyFactory{}
 	proxy := &MockedProxy{}
-	maxConsecutiveRequests := int64(10)
+	lrtOptions := NewLeastResponseTimeOptions{
+		maxConsecutiveRequests: int64(10),
+	}
 
 	t.Run("Should call the target with the least avg response time", func(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt := NewLeastResponseTime(targets, proxyFactory, lrtOptions)
 		lrt.requestsCount.Store(10)
 		lrt.targets = lrtTargets
 
@@ -68,7 +70,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt := NewLeastResponseTime(targets, proxyFactory, lrtOptions)
 		lrt.targets = lrtTargets
 		lrt.targets[1].Healthy = false
 
@@ -90,7 +92,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		targets := getTargets()
 		lrtTargets := buildLRTTargets(targets)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt := NewLeastResponseTime(targets, proxyFactory, lrtOptions)
 		lrt.targets = lrtTargets
 		lrt.targets[0].Healthy = false
 		lrt.targets[1].Healthy = false
@@ -112,7 +114,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 		lrtTargets := buildLRTTargets(targets)
 		lrtTargets[1].consecutiveRequests.Store(11)
 
-		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt := NewLeastResponseTime(targets, proxyFactory, lrtOptions)
 		lrt.targets = lrtTargets
 
 		proxyFactory.On("Create", "localhost", 8080).Return(proxy)
@@ -138,7 +140,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 			target.avgResponseTime.Store(0)
 		}
 
-		lrt := NewLeastResponseTime(targets, proxyFactory, maxConsecutiveRequests)
+		lrt := NewLeastResponseTime(targets, proxyFactory, lrtOptions)
 		lrt.requestsCount.Store(0)
 		lrt.targets = lrtTargets
 

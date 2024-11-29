@@ -69,7 +69,11 @@ type leastResponseTime struct {
 	mux                    sync.RWMutex
 }
 
-func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory, maxConsecutiveRequests int64) *leastResponseTime {
+type NewLeastResponseTimeOptions struct {
+	maxConsecutiveRequests int64
+}
+
+func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory, opts NewLeastResponseTimeOptions) *leastResponseTime {
 	lrtTargets := make([]*leastResponseTimeTarget, len(targets))
 
 	for i, target := range targets {
@@ -79,7 +83,7 @@ func NewLeastResponseTime(targets []*lb.Target, proxyFactory proxy.ProxyFactory,
 	return &leastResponseTime{
 		targets:                lrtTargets,
 		proxyFactory:           proxyFactory,
-		maxConsecutiveRequests: maxConsecutiveRequests,
+		maxConsecutiveRequests: opts.maxConsecutiveRequests,
 		requestsCount:          atomic.Int64{},
 		mux:                    sync.RWMutex{},
 	}
