@@ -84,9 +84,12 @@ func TestConfigLoader_Load(t *testing.T) {
 
 		testSetup.fileReader.On("Read", "config.yaml").Return(mockedYamlConfig, nil)
 
-		targetGroups, err := testSetup.configLoader.Load()
+		loadBalancer, err := testSetup.configLoader.Load()
 
 		assert.Nil(t, err)
+
+		targetGroups := loadBalancer.TargetGroups
+
 		assert.Len(t, targetGroups, 2)
 
 		assert.Len(t, targetGroups[0].Targets, 2)

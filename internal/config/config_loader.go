@@ -6,6 +6,7 @@ import (
 
 	"github.com/joaosczip/go-lb/internal/algorithms"
 	"github.com/joaosczip/go-lb/internal/proxy"
+	"github.com/joaosczip/go-lb/pkg/lb"
 	alg "github.com/joaosczip/go-lb/pkg/lb/algorithms"
 	"github.com/joaosczip/go-lb/pkg/lb/targetgroup"
 	"gopkg.in/yaml.v3"
@@ -67,7 +68,7 @@ func (c *ConfigLoader) getAlgorithm(targets []*targetgroup.Target, algConfig Alg
 	})
 }
 
-func (c *ConfigLoader) Load() ([]*targetgroup.TargetGroup, error) {
+func (c *ConfigLoader) Load() (*lb.LoadBalancer, error) {
 	configFileData, err := c.fileReader.Read(c.path)
 
 	if err != nil {
@@ -108,5 +109,5 @@ func (c *ConfigLoader) Load() ([]*targetgroup.TargetGroup, error) {
 		}))
 	}
 
-	return targetGroups, nil
+	return lb.NewLoadBalancer(targetGroups, config.Port), nil
 }
