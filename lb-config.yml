@@ -1,14 +1,23 @@
+# The port on which the load balancer listens for incoming traffic
 port: 9000
+
+# A list of target groups that the load balancer will route traffic to
 target-groups:
   - name: node-server
+
+    # The algorithm used to route traffic to the targets
     algorithm:
       type: round-robin
+
+    # The health check configuration for the target group. Both interval and timeout are in seconds
     health-check:
       interval: 4
       timeout: 2
       failure-threshold: 2
       healthy-threshold: 1
       path: "/health"
+
+    # A list of targets that the load balancer will route traffic to
     targets:
       - host: "localhost"
         port: 8080

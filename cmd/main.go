@@ -14,7 +14,7 @@ func main() {
 	proxyFactory := proxy.NewReverseProxyFactory()
 	fileReader := config.NewOSFileReader()
 
-	configLoader := config.NewConfigLoader("lb-config.yaml", httpClient, proxyFactory, fileReader)
+	configLoader := config.NewConfigLoader("lb-config.yml", httpClient, proxyFactory, fileReader)
 	targetGroups, err := configLoader.Load()
 
 	if err != nil {
