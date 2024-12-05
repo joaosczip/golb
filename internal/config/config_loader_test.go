@@ -32,9 +32,9 @@ func (m *ProxyFactoryMock) Create(host string, port int) proxy.Proxy {
 }
 
 type TestSetup struct {
-	fileReader *FileReaderMock
+	fileReader   *FileReaderMock
 	proxyFactory *ProxyFactoryMock
-	httpClient http.Client
+	httpClient   http.Client
 	configLoader ConfigLoader
 }
 
@@ -45,9 +45,9 @@ func setup() TestSetup {
 	configLoader := NewConfigLoader("config.yaml", httpClient, proxyFactory, fileReader)
 
 	return TestSetup{
-		fileReader: fileReader,
+		fileReader:   fileReader,
 		proxyFactory: proxyFactory,
-		httpClient: *httpClient,
+		httpClient:   *httpClient,
 		configLoader: *configLoader,
 	}
 }
@@ -55,7 +55,7 @@ func setup() TestSetup {
 func TestConfigLoader_Load(t *testing.T) {
 	t.Run("Should return an error when file reader cannot read the file", func(t *testing.T) {
 		testSetup := setup()
-		
+
 		testSetup.fileReader.On("Read", "config.yaml").Return([]byte(nil), errors.New("unexpected error"))
 
 		_, err := testSetup.configLoader.Load()
@@ -77,7 +77,7 @@ func TestConfigLoader_Load(t *testing.T) {
 
 	t.Run("Should return a list of target groups on success", func(t *testing.T) {
 		testSetup := setup()
-		
+
 		mockedYamlConfig, err := os.ReadFile("../../test/fixtures/mocked_config_file.yaml")
 
 		assert.NoError(t, err)
@@ -87,22 +87,40 @@ func TestConfigLoader_Load(t *testing.T) {
 		targetGroups, err := testSetup.configLoader.Load()
 
 		assert.Nil(t, err)
-		assert.Len(t, targetGroups, 1)
+		assert.Len(t, targetGroups, 2)
+
 		assert.Len(t, targetGroups[0].Targets, 2)
+		assert.Len(t, targetGroups[1].Targets, 2)
+
 		assert.Equal(t, targetGroups[0].Algorithm, algorithms.NewRoundRobin(targetGroups[0].Targets, testSetup.proxyFactory))
+		assert.Equal(t, targetGroups[1].Algorithm, algorithms.NewLeastResponseTime(targetGroups[1].Targets, testSetup.proxyFactory, algorithms.NewLeastResponseTimeOptions{
+			MaxConsecutiveRequests: int64(3),
+		}))
 
 		assert.Equal(t, targetGroups[0].Targets, []*targetgroup.Target{
 			{Host: "localhost", Port: 8080},
 			{Host: "localhost", Port: 8081},
 		})
+		assert.Equal(t, targetGroups[1].Targets, []*targetgroup.Target{
+			{Host: "localhost", Port: 8082},
+			{Host: "localhost", Port: 8083},
+		})
 
 		assert.Equal(t, targetGroups[0].HealthCheckConfig, &targetgroup.HealthCheckConfig{
-			Interval: 1,
-			Timeout: 2,
+			Interval:         1,
+			Timeout:          2,
 			FailureThreshold: 3,
 			HealthyThreshold: 4,
-			Path: "/health",
-			HttpClient: &testSetup.httpClient,
+			Path:             "/health",
+			HttpClient:       &testSetup.httpClient,
+		})
+		assert.Equal(t, targetGroups[1].HealthCheckConfig, &targetgroup.HealthCheckConfig{
+			Interval:         1,
+			Timeout:          2,
+			FailureThreshold: 3,
+			HealthyThreshold: 4,
+			Path:             "/health",
+			HttpClient:       &testSetup.httpClient,
 		})
 	})
 }

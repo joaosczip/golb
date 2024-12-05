@@ -39,7 +39,7 @@ func TestLeastResponseTime_Handle(t *testing.T) {
 	proxyFactory := &MockedProxyFactory{}
 	proxy := &MockedProxy{}
 	lrtOptions := NewLeastResponseTimeOptions{
-		maxConsecutiveRequests: int64(10),
+		MaxConsecutiveRequests: int64(10),
 	}
 
 	t.Run("Should call the target with the least avg response time", func(t *testing.T) {

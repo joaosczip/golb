@@ -1,7 +1,8 @@
 port: 9000
 target-groups:
   - name: test
-    algorithm: round-robin
+    algorithm:
+      type: round-robin
     health-check:
       interval: 1
       timeout: 2
@@ -13,3 +14,19 @@ target-groups:
         port: 8080
       - host: "localhost"
         port: 8081
+  - name: test-2
+    algorithm:
+      type: least-response-time
+      options:
+        max-consecutive-requests: 3
+    health-check:
+      interval: 1
+      timeout: 2
+      failure-threshold: 3
+      healthy-threshold: 4
+      path: "/health"
+    targets:
+      - host: "localhost"
+        port: 8082
+      - host: "localhost"
+        port: 8083
