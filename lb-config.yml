@@ -1,7 +1,8 @@
 port: 9000
 target-groups:
   - name: node-server
-    algorithm: round-robin
+    algorithm:
+      type: round-robin
     health-check:
       interval: 4
       timeout: 2
