@@ -1,17 +1,17 @@
 package targetgroup
 
-import alg "github.com/joaosczip/go-lb/pkg/lb/algorithms"
+import lb "github.com/joaosczip/go-lb/pkg/lb/algorithms"
 
 type TargetGroup struct {
 	Targets           []*Target
 	HealthCheckConfig *HealthCheckConfig
-	Algorithm         alg.Algorithm
+	Algorithm         lb.Algorithm
 }
 
 type NewTargetGroupParams struct {
 	Targets           []*Target
 	HealthCheckConfig *HealthCheckConfig
-	Algorithm         alg.Algorithm
+	Algorithm         lb.Algorithm
 }
 
 func NewTargetGroup(params NewTargetGroupParams) *TargetGroup {
